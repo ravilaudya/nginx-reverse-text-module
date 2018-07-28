@@ -130,24 +130,24 @@ static ngx_file_chunk_t find_next_file_chunk(ngx_buf_t *buf, ngx_int_t remaining
     return file_chunk;
 }
 
-static void build_buffer_to_send(ngx_http_request_t *r, ngx_buf_t *buffer_to_send, u_char *in_memory_buf, ngx_int_t next_chunk_size) {
+static void build_buffer_to_send(ngx_http_request_t *r, ngx_buf_t *buffer_to_send, u_char *in_memory_buf, ngx_file_chunk_t file_chunk) {
     buffer_to_send->start = buffer_to_send->pos = in_memory_buf;
-    buffer_to_send->end = buffer_to_send->last =  in_memory_buf + next_chunk_size;
+    buffer_to_send->end = buffer_to_send->last =  in_memory_buf + file_chunk.next_chunk_size;
     in_place_buffer_reverse(r, buffer_to_send);
 
-    buffer_to_send->last_buf = (r == r->main) ? 1: 0;
-    buffer_to_send->last_in_chain = 1;
+    buffer_to_send->last_buf = (r == r->main && file_chunk.remaining_size <= 0)? 1: 0;
+    buffer_to_send->last_in_chain = (file_chunk.remaining_size <= 0)? 1: 0;
     buffer_to_send->memory = 1;
 }
 
-static ngx_int_t build_buffer_and_send_to_client(ngx_http_request_t *r, ngx_buf_t *buffer_to_send, u_char *in_memory_buf, ngx_int_t next_chunk_size) {
+static ngx_int_t build_buffer_and_send_to_client(ngx_http_request_t *r, ngx_buf_t *buffer_to_send, u_char *in_memory_buf, ngx_file_chunk_t file_chunk) {
     ngx_chain_t   out;
 
-    build_buffer_to_send(r, buffer_to_send, in_memory_buf, next_chunk_size);
+    build_buffer_to_send(r, buffer_to_send, in_memory_buf, file_chunk);
     out.buf = buffer_to_send;
     out.next = NULL;
 
-    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Sending file buffer with size: %d", next_chunk_size);
+    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Sending file buffer with size: %d", file_chunk.next_chunk_size);
 
     return ngx_http_output_filter(r, &out);
 }
@@ -181,9 +181,9 @@ static ngx_int_t send_file_chunked_response(ngx_http_request_t *r, ngx_buf_t *bu
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Error reading from file: %s, size: %d, error: %d", buf->file->name.data, file_chunk.next_chunk_size, rc);
             return NGX_ERROR;
         }
-        rc = build_buffer_and_send_to_client(r, buffer_to_send, in_memory_buf, file_chunk.next_chunk_size);
+        rc = build_buffer_and_send_to_client(r, buffer_to_send, in_memory_buf, file_chunk);
 
-        if (rc != NGX_OK) {
+        if (rc != NGX_OK && rc != NGX_AGAIN) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Error sending data to output filter from file: %s, size: %d, error: %d", buf->file->name.data, file_chunk.next_chunk_size, rc);
             return rc;
         }
@@ -200,14 +200,14 @@ static ngx_int_t send_file_buffer(ngx_http_request_t *r, ngx_buf_t *buf) {
 /**
  * Reverse the current buffer and send to client
  */
-static ngx_int_t send_current_buffer(ngx_http_request_t *r, ngx_buf_t  *buf) {
+static ngx_int_t send_current_buffer(ngx_http_request_t *r, ngx_buf_t  *buf, ngx_chain_t *parent) {
     ngx_chain_t  out;
 
     if (buf->in_file == 1) {
         return send_file_buffer(r, buf);
     }
     in_place_buffer_reverse(r, buf);
-    buf->last_buf = (r == r->main) ? 1: 0;
+    buf->last_buf = (r == r->main && parent == NULL) ? 1: 0;
     buf->last_in_chain = 1;
     out.buf = buf;
     out.next = NULL;
@@ -231,7 +231,7 @@ static ngx_int_t send_reverse_text_recursive(ngx_http_request_t *r, ngx_chain_t 
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Error sending data to client: %d", rc);
         return rc;
     }
-    return send_current_buffer(r, in->buf);
+    return send_current_buffer(r, in->buf, parent);
 }
 
 /**
