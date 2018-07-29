@@ -66,6 +66,10 @@ Add following snippet(s) to ```nginx.conf```
 cd test
 npm install
 npm test
+
+#OR
+
+ENDPOINT=http://localhost:8080/ npm test
 ```
 
 ## Sample Test using Curl
