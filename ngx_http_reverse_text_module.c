@@ -11,15 +11,22 @@
 #include <ngx_http.h>
 
 
+static void *ngx_http_reverse_text_create_cf(ngx_conf_t *cf);
+static char *ngx_http_reverse_text_merge_cf(ngx_conf_t *cf, void *parent, void *child);
 static char *ngx_http_reverse_text(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 static ngx_int_t ngx_http_reverse_text_handler(ngx_http_request_t *r);
 
 #define DEFAULT_BUFFER_SIZE     (4 * 1024)
 
 typedef struct {
-    ngx_int_t next_chunk_size;
-    ngx_int_t remaining_size;
-    ngx_int_t offset;
+    ngx_flag_t reverse_text;
+    ngx_uint_t  in_memory_buffer_size;
+} ngx_http_reverse_text_loc_conf_t;
+
+typedef struct {
+    ngx_uint_t next_chunk_size;
+    ngx_uint_t remaining_size;
+    ngx_uint_t offset;
 } ngx_file_chunk_t;
 
 /**
@@ -29,11 +36,16 @@ typedef struct {
 static ngx_command_t ngx_http_reverse_text_commands[] = {
 
     { ngx_string("reverse_text"), /* directive */
-      NGX_HTTP_LOC_CONF|NGX_CONF_NOARGS, /* location context and takes
-                                            no arguments*/
+      NGX_HTTP_LOC_CONF|NGX_CONF_NOARGS, /* location context and takes no arguments*/
       ngx_http_reverse_text, /* configuration setup function */
-      0, /* No offset. Only one context is supported. */
+      NGX_HTTP_LOC_CONF_OFFSET, /* No offset. Only one context is supported. */
       0, /* No offset when storing the module configuration on struct. */
+      NULL},
+    { ngx_string("in_memory_buffer_size"), /* directive */
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_num_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_reverse_text_loc_conf_t, in_memory_buffer_size),
       NULL},
 
     ngx_null_command /* command termination */
@@ -50,8 +62,8 @@ static ngx_http_module_t ngx_http_reverse_text_module_ctx = {
     NULL, /* create server configuration */
     NULL, /* merge server configuration */
 
-    NULL, /* create location configuration */
-    NULL /* merge location configuration */
+    ngx_http_reverse_text_create_cf, /* create location configuration */
+    ngx_http_reverse_text_merge_cf /* merge location configuration */
 };
 
 /* Module definition. */
@@ -113,19 +125,12 @@ static void in_place_buffer_reverse(ngx_http_request_t *r, ngx_buf_t *buffer) {
 //    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "After reverse: %s", buffer->start);
 }
 
-static ngx_int_t max(ngx_int_t a, ngx_int_t b) {
-    return (a > b)? a: b;
-}
-static ngx_int_t min(ngx_int_t a, ngx_int_t b) {
-    return (a < b)? a: b;
-}
-
-static ngx_file_chunk_t find_next_file_chunk(ngx_buf_t *buf, ngx_int_t remaining_size, ngx_int_t offset) {
+static ngx_file_chunk_t find_next_file_chunk(ngx_buf_t *buf, ngx_uint_t remaining_size, ngx_uint_t offset, ngx_uint_t in_memory_buffer_size) {
     ngx_file_chunk_t  file_chunk;
 
-    file_chunk.next_chunk_size = min(remaining_size, DEFAULT_BUFFER_SIZE);
+    file_chunk.next_chunk_size = ngx_min(remaining_size, in_memory_buffer_size);
     file_chunk.remaining_size = remaining_size - file_chunk.next_chunk_size;
-    file_chunk.offset = max(offset - file_chunk.next_chunk_size, 0);
+    file_chunk.offset = ngx_max(offset - file_chunk.next_chunk_size, 0);
 
     return file_chunk;
 }
@@ -157,9 +162,20 @@ static ngx_int_t send_file_chunked_response(ngx_http_request_t *r, ngx_buf_t *bu
     u_char        *in_memory_buf;
     ngx_buf_t     *buffer_to_send;
     ngx_file_chunk_t  file_chunk;
+    ngx_uint_t    in_memory_buffer_size;
+    ngx_http_reverse_text_loc_conf_t *rtcf;
+
 
     buf_size = ngx_buf_size(buf);
-    file_chunk = find_next_file_chunk(buf, buf_size, buf_size);
+
+    rtcf = ngx_http_get_module_loc_conf(r, ngx_http_reverse_text_module);
+    if (rtcf == NULL) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Can not get context for module");
+        return NGX_ERROR;
+    }
+    in_memory_buffer_size = rtcf->in_memory_buffer_size;
+
+    file_chunk = find_next_file_chunk(buf, buf_size, buf_size, in_memory_buffer_size);
 
     rc = NGX_OK;
 
@@ -188,7 +204,7 @@ static ngx_int_t send_file_chunked_response(ngx_http_request_t *r, ngx_buf_t *bu
             return rc;
         }
 
-        file_chunk = find_next_file_chunk(buf, file_chunk.remaining_size, file_chunk.offset);
+        file_chunk = find_next_file_chunk(buf, file_chunk.remaining_size, file_chunk.offset, in_memory_buffer_size);
     }
     return rc;
 }
@@ -274,7 +290,14 @@ static void ngx_http_reverse_text_send_to_client(ngx_http_request_t *r) {
  */
 static ngx_int_t ngx_http_reverse_text_handler(ngx_http_request_t *r) {
     ngx_int_t    rc;
+    ngx_http_reverse_text_loc_conf_t *rtcf;
 
+    rtcf = ngx_http_get_module_loc_conf(r, ngx_http_reverse_text_module);
+
+//    if (!rtcf->reverse_text) {
+//        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "reverse_text module not being used");
+//        return NGX_DECLINED;
+//    }
     rc = ngx_http_read_client_request_body(r, ngx_http_reverse_text_send_to_client);
     if (rc >= NGX_HTTP_SPECIAL_RESPONSE) {
         /* error */
@@ -283,6 +306,35 @@ static ngx_int_t ngx_http_reverse_text_handler(ngx_http_request_t *r) {
     return NGX_DONE;
 
 } /* ngx_http_reverse_text_handler */
+
+
+static void * ngx_http_reverse_text_create_cf(ngx_conf_t *cf) {
+    ngx_http_reverse_text_loc_conf_t *rtcf;
+
+    rtcf = ngx_palloc(cf->pool, sizeof(ngx_http_reverse_text_loc_conf_t));
+    if (rtcf == NULL) {
+        return NGX_CONF_ERROR;
+    }
+    ngx_log_error(NGX_LOG_ERR, cf->log, 0, "setting the config...");
+    rtcf->reverse_text = NGX_CONF_UNSET;
+    rtcf->in_memory_buffer_size = NGX_CONF_UNSET_UINT;
+
+    return rtcf;
+}
+
+static char * ngx_http_reverse_text_merge_cf(ngx_conf_t *cf, void *parent, void *child) {
+    ngx_http_reverse_text_loc_conf_t *prev = parent;
+    ngx_http_reverse_text_loc_conf_t *conf = child;
+
+    ngx_conf_merge_uint_value(conf->in_memory_buffer_size, prev->in_memory_buffer_size, DEFAULT_BUFFER_SIZE);
+    if (conf->in_memory_buffer_size < 1) {
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0, "in_memory_buffer_size must be >= 1");
+        return NGX_CONF_ERROR;
+    }
+    ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "merging the config...[%d, %d]", conf->reverse_text, conf->in_memory_buffer_size);
+
+    return NGX_CONF_OK;
+}
 
 /**
  * Configuration setup function that installs the content handler.
@@ -299,7 +351,6 @@ static ngx_int_t ngx_http_reverse_text_handler(ngx_http_request_t *r) {
 static char *ngx_http_reverse_text(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
     ngx_http_core_loc_conf_t *clcf; /* pointer to core location configuration */
 
-    /* Install the hello world handler. */
     clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
     clcf->handler = ngx_http_reverse_text_handler;
 
