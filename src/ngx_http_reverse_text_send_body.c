@@ -5,6 +5,11 @@
  *
  * @brief  Body Sender
  *
+ * Iterates through the list of buffers (chains), sends the response to the client
+ * in reverse. i.e. If the input buffers are a list: [ab]->[cd]->[ef]->[gh],
+ * recursively go to the end of the list and send the reversed text of each buffer.
+ * In this example, process [gh] first (i.e. send "hg" to client), [ef] next,
+ * [cd] next and finally [ab].
  */
 #include <ngx_config.h>
 #include <ngx_core.h>
@@ -124,7 +129,7 @@ static ngx_int_t send_file_buffer(ngx_http_request_t *r, ngx_buf_t *buf, ngx_htt
 }
 
 /**
- * Reverse the current buffer and send to client
+ * Reverse the current buffer and send to client [in memory or in file]
  */
 static ngx_int_t send_current_buffer(ngx_http_request_t *r, ngx_buf_t  *buf, ngx_chain_t *parent, ngx_http_reverse_text_loc_conf_t *rtcf) {
     ngx_chain_t  out;

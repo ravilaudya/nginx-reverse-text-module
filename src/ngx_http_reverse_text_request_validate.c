@@ -26,6 +26,9 @@ static ngx_int_t is_empty_request_body_input(ngx_http_request_t *r) {
     return len <= 0? 1 : 0;
 }
 
+/**
+ * Validate the input request
+ */
 ngx_int_t ngx_http_reverse_text_validate_request(ngx_http_request_t *r) {
     if (!is_request_post_only(r)) {
         return NGX_HTTP_NOT_ALLOWED;

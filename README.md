@@ -1,9 +1,18 @@
 # nginx-reverse-text-module
 NGINX module to reverse input text
 
-## Installation
+## Install using Docker
 - Clone this repo [reverse_text](https://github.com/mouryaravi/nginx-reverse-text-module)
-- Download and extract the [latest nginx](http://nginx.org/en/download.html)
+```bash
+  cd nginx-reverse-text-module/docker
+  docker build -t reverse-text .
+  docker run -d -it -p 8080:8080 reverse-text
+```
+- Access the module at ```http://localhost:8080/reverse``` on host machine
+
+## Manual Installation
+- Clone this repo [reverse_text](https://github.com/mouryaravi/nginx-reverse-text-module)
+- Download and extract the [latest nginx](http://nginx.org/download/nginx-1.15.2.tar.gz)
 - Configure, compile, and install nginx
 ```bash
 git clone https://github.com/mouryaravi/nginx-reverse-text-module
@@ -25,7 +34,7 @@ make install
 ```
 Note: You may have to pass other arguments during configure as needed
 
-## Configuration
+#### Configuration (Manual Installation)
 Add following snippet(s) to ```nginx.conf```
   - If you configured as dynamic module, load the module in the beginning of the config
 ```nginx
@@ -39,7 +48,7 @@ Add following snippet(s) to ```nginx.conf```
 ```nginx
   location = /reverse {
       reverse_text;
-      client_body_buffer_size 1k; #nginx directive, optional
+      client_body_buffer_size 8k; #nginx directive, optional
       client_body_temp_path /tmp; #nginx directive, optional
       in_memory_buffer_size   2048; #custom directive, optional
   }
@@ -48,7 +57,7 @@ Add following snippet(s) to ```nginx.conf```
 ## Directives
 - [client_body_buffer_size](http://nginx.org/en/docs/http/ngx_http_core_module.html#client_body_buffer_size)
 - [client_body_temp_path](http://nginx.org/en/docs/http/ngx_http_core_module.html#client_body_temp_path)
-- ``in_memory_buffer_size`` (in bytes): If the client input body is larger than ``client_body_buffer_size``, partial or full data can be written to a temporary file. ``in_memory_buffer_size`` defines the maximum chunk size to be read from file and can be kept in memory before sending to client. Defaults to 2048.
+- ``in_memory_buffer_size`` (in bytes): If the client input body is larger than ``client_body_buffer_size``, partial or full data can be written to a temporary file. ``in_memory_buffer_size`` defines the maximum chunk size to be read from file and can be kept in memory before sending to client. Defaults to 4096.
 
 ## Tests
 - Note: Requires [node.js](https://nodejs.org/en/download/) installed
