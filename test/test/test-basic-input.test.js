@@ -1,7 +1,7 @@
 const request = require('supertest');
 const assert = require('assert');
 
-describe('GET /reverse', function() {
+describe('Basic Input', function() {
   it('respond with reverse text, text/plain', function(done) {
     request('http://localhost:8080')
     .post('/reverse')
@@ -14,13 +14,3 @@ describe('GET /reverse', function() {
   });
 });
 
-describe('GET /reverse', function() {
-  it('respond with proper content type', function(done) {
-    request('http://localhost:8080')
-    .post('/reverse')
-    .set('Content-Type', 'text/html')
-    .send('abcd efgh ijkl mnop qrst uvwx yz')
-    .expect(400)
-    .end(done)
-  });
-});
