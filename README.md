@@ -73,3 +73,7 @@ curl -X POST \
 ```bash
 .tseuqer tsop a fo tnetnoc eht esrever taht C ni eludom xnigN a etirW     
 ```
+
+## Limitations
+- Supports only "text/plain" content type and POST requests
+- Supports only ascii text
