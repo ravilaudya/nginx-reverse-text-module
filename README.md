@@ -39,14 +39,16 @@ Add following snippet(s) to ```nginx.conf```
 ```nginx
   location = /reverse {
       reverse_text;
-      client_body_buffer_size 1k; #nginx directive
-      in_memory_buffer_size   2048; #custom directive
+      client_body_buffer_size 1k; #nginx directive, optional
+      client_body_temp_path /tmp; #nginx directive, optional
+      in_memory_buffer_size   2048; #custom directive, optional
   }
 ```
 
 ## Directives
 - [client_body_buffer_size](http://nginx.org/en/docs/http/ngx_http_core_module.html#client_body_buffer_size)
-- ``in_memory_buffer_size`` (in bytes): If the client input body is larger than ``client_body_buffer_size``, partial or full data can be written to a temporary file. ``in_memory_buffer_size`` defines the maximum chunk size to be read from file and can be kept in memory before sending to client.
+- [client_body_temp_path](http://nginx.org/en/docs/http/ngx_http_core_module.html#client_body_temp_path)
+- ``in_memory_buffer_size`` (in bytes): If the client input body is larger than ``client_body_buffer_size``, partial or full data can be written to a temporary file. ``in_memory_buffer_size`` defines the maximum chunk size to be read from file and can be kept in memory before sending to client. Defaults to 2048.
 
 ## Tests
 - Note: Requires [node.js](https://nodejs.org/en/download/) installed

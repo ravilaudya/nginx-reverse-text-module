@@ -50,6 +50,9 @@ static void build_buffer_to_send(ngx_http_request_t *r, ngx_buf_t *buffer_to_sen
     buffer_to_send->end = buffer_to_send->last =  in_memory_buf + file_chunk.next_chunk_size;
     in_place_buffer_reverse(r, buffer_to_send);
 
+    buffer_to_send->in_file = 0;
+    buffer_to_send->file = NULL;
+    buffer_to_send->recycled = 1;
     buffer_to_send->last_buf = (r == r->main && file_chunk.remaining_size <= 0)? 1: 0;
     buffer_to_send->last_in_chain = (file_chunk.remaining_size <= 0)? 1: 0;
     buffer_to_send->memory = 1;
@@ -86,12 +89,12 @@ static ngx_int_t send_file_chunked_response(ngx_http_request_t *r, ngx_buf_t *bu
 
     rc = NGX_OK;
 
-    in_memory_buf = ngx_palloc(r->connection->pool, file_chunk.next_chunk_size);
+    in_memory_buf = ngx_pcalloc(r->connection->pool, file_chunk.next_chunk_size);
     if (in_memory_buf == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Can not allocate memory for buffer to read from file: %s, size: %d", buf->file->name.data, buf_size);
         return NGX_ERROR;
     }
-    buffer_to_send = ngx_palloc(r->connection->pool, sizeof(ngx_buf_t *));
+    buffer_to_send = ngx_pcalloc(r->connection->pool, sizeof(ngx_buf_t *));
     if (buffer_to_send == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Can not allocate memory for buffer to send to client, for data from file: %s, size: %d", buf->file->name.data, file_chunk.next_chunk_size);
         return NGX_ERROR;

@@ -12,25 +12,25 @@
 #include <ngx_http.h>
 #include "ngx_http_reverse_text_module.h"
 
-static bool is_empty_request_body_input(ngx_http_request_t *r) {
+static ngx_int_t is_empty_request_body_input(ngx_http_request_t *r) {
     ngx_chain_t *in;
     ngx_int_t len;
 
     if (is_empty_request_body(r)) {
-        return true;
+        return 1;
     }
     len = 0;
     for (in = r->request_body->bufs; in; in = in->next) {
         len += ngx_buf_size(in->buf);
     }
-    return len <= 0;
+    return len <= 0? 1 : 0;
 }
 
 ngx_int_t ngx_http_reverse_text_validate_request(ngx_http_request_t *r) {
     if (!is_request_post_only(r)) {
         return NGX_HTTP_NOT_ALLOWED;
     }
-    if (is_empty_request_body_input(r)) {
+    if (is_empty_request_body_input(r) == 1) {
         return NGX_HTTP_BAD_REQUEST;
     }
     if (is_content_type_header_set(r)) {

@@ -127,7 +127,7 @@ static ngx_int_t ngx_http_reverse_text_handler(ngx_http_request_t *r) {
 static void * ngx_http_reverse_text_create_cf(ngx_conf_t *cf) {
     ngx_http_reverse_text_loc_conf_t *rtcf;
 
-    rtcf = ngx_palloc(cf->pool, sizeof(ngx_http_reverse_text_loc_conf_t));
+    rtcf = ngx_pcalloc(cf->pool, sizeof(ngx_http_reverse_text_loc_conf_t));
     if (rtcf == NULL) {
         return NGX_CONF_ERROR;
     }
