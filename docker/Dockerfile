@@ -1,5 +1,5 @@
 FROM ubuntu
-
+MAINTAINER   Ravi mouryaravi@gmail.com
 
 RUN apt-get update -y && \
     apt-get install gcc -y && \

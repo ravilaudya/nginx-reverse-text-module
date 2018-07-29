@@ -75,9 +75,9 @@ Assuming nginx is running at ```http://localhost:8080/```
 
 ```bash
 curl -X POST \
-     >   http://localhost:8080/reverse \
-     >    -H 'content-type: text/plain' \
-     >    -d 'Write a Nginx module in C that reverse the content of a post request.'
+        http://localhost:8080/reverse \
+         -H 'content-type: text/plain' \
+         -d 'Write a Nginx module in C that reverse the content of a post request.'
 ```
 
 - Expected Response
