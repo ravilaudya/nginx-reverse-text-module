@@ -9,7 +9,7 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
-
+#include "ngx_http_reverse_text_request_validate.h"
 
 static void *ngx_http_reverse_text_create_cf(ngx_conf_t *cf);
 static char *ngx_http_reverse_text_merge_cf(ngx_conf_t *cf, void *parent, void *child);
@@ -275,6 +275,14 @@ static void ngx_http_reverse_text_send_to_client(ngx_http_request_t *r) {
         ngx_http_finalize_request(r, NGX_HTTP_BAD_REQUEST);
         return;
     }
+    if (r->headers_in.content_type != NULL && r->headers_in.content_type->value.data != NULL) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "content type: %s", r->headers_in.content_type->value.data);
+        if (!is_request_plain_text_only(r)) {
+            ngx_http_finalize_request(r, NGX_HTTP_BAD_REQUEST);
+            return;
+        }
+    }
+
     rc = reverse_text_send_headers(r);
     if (rc == NGX_ERROR || rc > NGX_OK || r->header_only) {
         ngx_http_finalize_request(r, rc);

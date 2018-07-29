@@ -1,0 +1,26 @@
+{
+  "name": "test",
+  "version": "1.0.0",
+  "description": "Testing Nginx Module - Reversing input text",
+  "scripts": {
+    "test": "./node_modules/mocha/bin/mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mouryaravi/nginx-reverse-text-module.git"
+  },
+  "keywords": [
+    "nginx"
+  ],
+  "author": "Ravi",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mouryaravi/nginx-reverse-text-module/issues"
+  },
+  "homepage": "https://github.com/mouryaravi/nginx-reverse-text-module#readme",
+  "devDependencies": {
+    "express": "^4.16.3",
+    "mocha": "^5.2.0",
+    "supertest": "^3.1.0"
+  }
+}
