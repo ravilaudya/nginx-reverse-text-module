@@ -1,8 +1,5 @@
 const request = require('supertest');
-const express = require('express');
 const assert = require('assert');
-
-const app = express();
 
 describe('GET /reverse', function() {
   it('respond with reverse text, text/plain', function(done) {

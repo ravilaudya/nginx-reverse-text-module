@@ -19,8 +19,10 @@
   },
   "homepage": "https://github.com/mouryaravi/nginx-reverse-text-module#readme",
   "devDependencies": {
-    "express": "^4.16.3",
+    "chance": "^1.0.16",
+    "faker": "^4.1.0",
     "mocha": "^5.2.0",
+    "random-paragraph": "^1.0.4",
     "supertest": "^3.1.0"
   }
 }

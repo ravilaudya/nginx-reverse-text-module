@@ -48,9 +48,18 @@ Add following snippet(s) to ```nginx.conf```
 - [client_body_buffer_size](http://nginx.org/en/docs/http/ngx_http_core_module.html#client_body_buffer_size)
 - ``in_memory_buffer_size`` (in bytes): If the client input body is larger than ``client_body_buffer_size``, partial or full data can be written to a temporary file. ``in_memory_buffer_size`` defines the maximum chunk size to be read from file and can be kept in memory before sending to client.
 
+## Tests
+- Note: Requires [node.js](https://nodejs.org/en/download/) installed
+- Assuming nginx is running at ```http://localhost:8080/```
+```bash
+cd test
+npm install
+npm test
+```
 
-## Sample Test
+## Sample Test using Curl
 
+Assuming nginx is running at ```http://localhost:8080/```
 - Sample Request
 
 ```bash
